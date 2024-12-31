@@ -2,14 +2,15 @@ import { Schema, model, Document } from 'mongoose';
 import bcrypt from 'bcrypt';
 import validator from 'validator';
 
+import UserProfile from './UserProfile';
+
 interface IUser extends Document {
   email: string;
   password: string;
   username: string;
   googleId?: string;
   facebookId?: string;
-  role: 'guest' | 'standard' | 'premium' | 'admin';
-  isVerified: boolean;
+  role: 'standard' | 'premium' | 'admin';
   createdAt: {
     type: Date;
     default: Date;
@@ -32,21 +33,18 @@ const userSchema = new Schema<IUser>({
   password: {
     type: String,
     required: true,
+    select: false,
   },
   googleId: String,
   facebookId: String,
   role: {
     type: String,
-    enum: ['guest', 'standard', 'premium', 'admin'],
+    enum: ['standard', 'premium', 'admin'],
     default: 'standard',
   },
   createdAt: {
     type: Date,
     default: Date.now,
-  },
-  isVerified: {
-    type: Boolean,
-    default: false,
   },
   phoneNumber: {
     type: String,

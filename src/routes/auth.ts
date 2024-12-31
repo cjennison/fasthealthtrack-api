@@ -9,6 +9,7 @@ import authenticate from './middleware/authenticate';
 import verificationService from '../services/verification-service';
 import Verification from '../models/Verification';
 import VerificationStatus from '../models/VerificationStatus';
+import UserProfile from '../models/UserProfile';
 
 const router = Router();
 
@@ -26,6 +27,14 @@ router.post('/signup', async (req: Request, res: Response): Promise<void> => {
     const user = new User({ email, password, username, phoneNumber });
     await user.save();
 
+    console.log('User created successfully');
+
+    // Create default UserProfile
+    const userProfile = new UserProfile({ userId: user._id });
+    await userProfile.save();
+
+    console.log('UserProfile created successfully');
+
     const verificationCode = verificationService.generateVerificationCode();
     if (email) {
       const emailVerification = new Verification({
@@ -34,7 +43,7 @@ router.post('/signup', async (req: Request, res: Response): Promise<void> => {
         type: 'email',
       });
       await emailVerification.save();
-      await verificationService.sendVerificationEmail(email, verificationCode);
+      verificationService.sendVerificationEmail(email, verificationCode);
     }
     if (phoneNumber) {
       const smsVerification = new Verification({
@@ -177,12 +186,19 @@ router.get(
   async (req: Request, res: Response) => {
     const { userId } = req.body;
     try {
-      const user = await User.findById(userId);
+      const user = await User.findById(userId).lean();
       if (!user) {
         res.status(404).json({ message: 'User not found' });
         return;
       }
-      res.status(200).json(user);
+
+      // Get UserProfile
+      const userProfile = await UserProfile.findOne({ userId }).lean();
+
+      // Merge UserProfile into user object
+      const mergedUser = { ...user, userProfile: userProfile };
+
+      res.status(200).json(mergedUser);
     } catch (err) {
       res
         .status(500)
