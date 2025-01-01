@@ -2,8 +2,6 @@ import { Schema, model, Document } from 'mongoose';
 import bcrypt from 'bcrypt';
 import validator from 'validator';
 
-import UserProfile from './UserProfile';
-
 interface IUser extends Document {
   email: string;
   password: string;

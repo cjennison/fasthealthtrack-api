@@ -57,7 +57,14 @@ router.post('/signup', async (req: Request, res: Response): Promise<void> => {
         verificationCode
       );
     }
-    res.status(201).json({ message: 'User created successfully' });
+
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '1h' }
+    );
+
+    res.status(201).json({ message: 'User created successfully', token });
   } catch (err) {
     res.status(500).json({ message: 'Error creating user', error: err });
   }
@@ -158,24 +165,30 @@ router.post(
 // Login Endpoint
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
+  console.log('email', email, 'password', password);
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('+password');
     if (!user) {
       res.status(400).json({ message: 'Invalid credentials' });
       return;
     }
-    const isMatch = await bcrypt.compare(password, user.password);
+    console.log('found user', user);
+    const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log('password did not match');
       res.status(400).json({ message: 'Invalid credentials' });
       return;
     }
+    console.log('password matched');
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET as string,
       { expiresIn: '1h' }
     );
+    console.log('token', token);
     res.status(200).json({ token });
   } catch (err) {
+    console.log('error', err);
     res.status(500).json({ message: 'Error logging in', error: err });
   }
 });

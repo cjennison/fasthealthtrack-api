@@ -28,7 +28,7 @@ const userProfileSchema = new Schema<IUserProfile>({
   },
   weight: {
     type: Number,
-    default: 180,
+    default: 180.0,
   },
   activityLevel: {
     type: String,
