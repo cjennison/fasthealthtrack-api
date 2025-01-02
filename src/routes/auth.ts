@@ -27,13 +27,9 @@ router.post('/signup', async (req: Request, res: Response): Promise<void> => {
     const user = new User({ email, password, username, phoneNumber });
     await user.save();
 
-    console.log('User created successfully');
-
     // Create default UserProfile
     const userProfile = new UserProfile({ userId: user._id });
     await userProfile.save();
-
-    console.log('UserProfile created successfully');
 
     const verificationCode = verificationService.generateVerificationCode();
     if (email) {
@@ -172,14 +168,14 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ message: 'Invalid credentials' });
       return;
     }
-    console.log('found user', user);
+
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       console.log('password did not match');
       res.status(400).json({ message: 'Invalid credentials' });
       return;
     }
-    console.log('password matched');
+
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET as string,

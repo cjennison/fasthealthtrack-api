@@ -7,6 +7,7 @@ import passport from 'passport';
 import authRoutes from './routes/auth';
 import devRoutes from './routes/dev';
 import adminRoutes from './routes/admin';
+import userRoutes from './routes/user';
 
 import localLogger from './routes/middleware/local-logger';
 
@@ -32,6 +33,7 @@ mongoose
 app.use('/auth', authRoutes);
 app.use('/dev', devRoutes);
 app.use('/admin', adminRoutes);
+app.use('/users', userRoutes);
 
 // Default Route
 app.get('/', (req, res) => {

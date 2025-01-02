@@ -4,7 +4,7 @@ interface IUserProfile extends Document {
   userId: Types.ObjectId;
   age?: number;
   weight?: number;
-  activityLevel: 'low' | 'medium' | 'active';
+  activityLevel: 'low' | 'moderate' | 'active';
   gender:
     | 'male'
     | 'female'
@@ -32,8 +32,8 @@ const userProfileSchema = new Schema<IUserProfile>({
   },
   activityLevel: {
     type: String,
-    enum: ['low', 'medium', 'active'],
-    default: 'medium',
+    enum: ['low', 'moderate', 'active'],
+    default: 'moderate',
   },
   gender: {
     type: String,
