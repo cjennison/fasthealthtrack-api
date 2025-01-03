@@ -8,6 +8,7 @@ import authRoutes from './routes/auth';
 import devRoutes from './routes/dev';
 import adminRoutes from './routes/admin';
 import userRoutes from './routes/user';
+import wellnessRoutes from './routes/wellness';
 
 import localLogger from './routes/middleware/local-logger';
 
@@ -34,6 +35,7 @@ app.use('/auth', authRoutes);
 app.use('/dev', devRoutes);
 app.use('/admin', adminRoutes);
 app.use('/users', userRoutes);
+app.use('/wellness', wellnessRoutes);
 
 // Default Route
 app.get('/', (req, res) => {

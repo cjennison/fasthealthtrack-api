@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import UserProfile from '../models/UserProfile'; // Assuming the UserProfile model is in the models folder
 import authenticate from './middleware/authenticate'; // Middleware to authenticate the request
+import checkOwnership from './middleware/check-ownership';
+import User from '../models/User';
 
 const router = Router();
 
@@ -8,8 +10,14 @@ const router = Router();
 router.put(
   '/:userId/profile',
   authenticate,
+  checkOwnership(User, 'userId', '_id'),
   async (req: Request, res: Response) => {
     const { userId } = req.params;
+
+    if (req.body.userId !== userId) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
 
     // Whitelisted fields for updating the user profile
     const allowedFields = ['age', 'weight', 'activityLevel', 'gender'];
