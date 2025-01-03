@@ -32,21 +32,12 @@ router.get(
       return;
     }
 
-    console.log(
-      startDate,
-      endDate,
-      startDate ? new Date(startDate) : 'Invalid startDate',
-      endDate ? new Date(endDate) : 'Invalid endDate'
-    );
-
     if (startDate) {
       query.date = { $gte: startDate };
     }
     if (endDate) {
       query.date = { ...query.date, $lte: endDate };
     }
-
-    console.log(query);
 
     try {
       const wellnessData = await WellnessData.find(query);
@@ -99,7 +90,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
         glassesOfWater: glassesOfWater || 0, // Default to 0 if not provided
       });
       await newData.save();
-      res.status(200).json({ wellnessData: newData });
+      res.status(200).json(newData);
     }
   } catch (error) {
     res.status(500).json({ message: 'Error saving data', error });
@@ -111,9 +102,11 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
   const { id } = req.params;
   const { glassesOfWater } = req.body;
 
+  console.log(req.body);
+
   try {
     const wellnessData = await WellnessData.findById(id);
-    if (!checkModelOwnership(wellnessData, req.body.userId, 'userId')) {
+    if (!checkModelOwnership(wellnessData, 'userId', req.body.userId)) {
       res.status(403).json({ message: 'Forbidden' });
       return;
     }
@@ -126,13 +119,13 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
     wellnessData.glassesOfWater = glassesOfWater;
     await wellnessData.save();
 
-    res.status(200).json({ message: 'Data updated successfully' });
+    res.status(200).json(wellnessData);
   } catch (error) {
     res.status(500).json({ message: 'Error updating data', error });
   }
 });
 
-// Add a food entry to a specific date
+// Add a food entry to a wellness data item
 router.post(
   '/:wellnessDataId/food',
   authenticate,
@@ -142,7 +135,7 @@ router.post(
 
     try {
       const wellnessData = await WellnessData.findById(wellnessDataId);
-      if (!checkModelOwnership(wellnessData, req.body.userId, 'userId')) {
+      if (!checkModelOwnership(wellnessData, 'userId', req.body.userId)) {
         res.status(403).json({ message: 'Forbidden' });
         return;
       }
@@ -156,14 +149,14 @@ router.post(
       );
       await wellnessData.save();
 
-      res.status(200).json({ message: 'Food entry added successfully' });
+      res.status(200).json(wellnessData);
     } catch (error) {
       res.status(500).json({ message: 'Error adding food entry', error });
     }
   }
 );
 
-// Add an exercise entry to a specific date
+// Add an exercise entry to a wellness data item
 router.post(
   '/:wellnessDataId/exercise',
   authenticate,
@@ -173,7 +166,7 @@ router.post(
 
     try {
       const wellnessData = await WellnessData.findById(wellnessDataId);
-      if (!checkModelOwnership(wellnessData, req.body.userId, 'userId')) {
+      if (!checkModelOwnership(wellnessData, 'userId', req.body.userId)) {
         res.status(403).json({ message: 'Forbidden' });
         return;
       }
@@ -188,42 +181,9 @@ router.post(
       );
       await wellnessData.save();
 
-      res.status(200).json({ message: 'Exercise entry added successfully' });
+      res.status(200).json(wellnessData);
     } catch (error) {
       res.status(500).json({ message: 'Error adding exercise entry', error });
-    }
-  }
-);
-
-// Update glasses of water for a specific date
-router.put(
-  '/:wellnessDataId/water',
-  authenticate,
-  async (req: Request, res: Response) => {
-    const { wellnessDataId } = req.params;
-    const { glassesOfWater } = req.body;
-
-    try {
-      const wellnessData = await WellnessData.findById(wellnessDataId);
-      if (!checkModelOwnership(wellnessData, req.body.userId, 'userId')) {
-        res.status(403).json({ message: 'Forbidden' });
-        return;
-      }
-      if (!wellnessData) {
-        res.status(404).json({ message: 'No data found for this date' });
-        return;
-      }
-
-      wellnessData.glassesOfWater = glassesOfWater;
-      await wellnessData.save();
-
-      res
-        .status(200)
-        .json({ message: 'Glasses of water updated successfully' });
-    } catch (error) {
-      res
-        .status(500)
-        .json({ message: 'Error updating glasses of water', error });
     }
   }
 );

@@ -16,7 +16,6 @@ const checkModelOwnership = (
   if (!resource) {
     return false;
   }
-
   if (resource[idField]?.toString() !== userId) {
     return false;
   }
