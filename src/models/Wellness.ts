@@ -51,6 +51,7 @@ interface IWellnessData extends Document {
   foodEntries: Types.ObjectId[];
   exerciseEntries: Types.ObjectId[];
   glassesOfWater: number;
+  hasActivity: boolean;
 }
 
 const WellnessDataSchema = new Schema<IWellnessData>({
@@ -67,6 +68,7 @@ const WellnessDataSchema = new Schema<IWellnessData>({
   foodEntries: [{ type: Schema.Types.ObjectId, ref: 'FoodEntry' }],
   exerciseEntries: [{ type: Schema.Types.ObjectId, ref: 'ExerciseEntry' }],
   glassesOfWater: { type: Number, default: 0 },
+  hasActivity: { type: Boolean, default: false },
 });
 
 //  Ensure that there is only one wellness data item per user per day

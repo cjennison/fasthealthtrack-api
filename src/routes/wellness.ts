@@ -50,6 +50,59 @@ router.get(
   }
 );
 
+router.get(
+  '/users/:userId/streak',
+  authenticate,
+  checkOwnership(User, 'userId', '_id'),
+  async (req: Request, res: Response) => {
+    const { userId } = req.params;
+
+    try {
+      const todayFormatted = formatDate(new Date());
+
+      // Fetch all wellness data for the user sorted by date descending
+      const wellnessData = await WellnessData.find({
+        userId,
+        date: { $lte: todayFormatted },
+        hasActivity: true,
+      })
+        .sort({ date: -1 })
+        .select('date hasActivity');
+
+      if (wellnessData.length === 0) {
+        res.status(200).json({ streak: 0 });
+        return;
+      }
+
+      let streak = 0;
+      let previousDate = new Date(todayFormatted); // Start with today's date
+
+      for (let i = 0; i < wellnessData.length; i++) {
+        const currentDate = new Date(wellnessData[i].date.toString());
+        const diffDays =
+          (previousDate.getTime() - currentDate.getTime()) / (1000 * 3600 * 24);
+
+        if (diffDays === 0 || diffDays === 1) {
+          // Count streak only for today or the next consecutive day
+          streak++;
+          previousDate = currentDate;
+        } else if (diffDays > 1) {
+          break; // Streak broken
+        }
+      }
+
+      res.status(200).json({
+        streak,
+        dateProcessedFrom: todayFormatted,
+        streakFromDate: formatDate(previousDate),
+      });
+    } catch (error) {
+      console.error('Error calculating streak:', error);
+      res.status(500).json({ message: 'Error calculating streak', error });
+    }
+  }
+);
+
 // Get Wellness Data for a specific date for a user
 router.get(
   '/users/:userId/:date',
@@ -118,6 +171,9 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
     }
 
     wellnessData.glassesOfWater = glassesOfWater;
+
+    //  trigger hasActivity flag if glassesOfWater is updated to be non-zero
+    wellnessData.hasActivity = wellnessData.hasActivity || glassesOfWater > 0;
     await wellnessData.save();
 
     res.status(200).json(wellnessData);
@@ -135,6 +191,12 @@ router.post(
     const { name, quantity, calories } = req.body;
 
     try {
+      const wellnessData = await WellnessData.findById(wellnessDataId);
+      if (!checkModelOwnership(wellnessData, 'userId', req.body.userId)) {
+        res.status(403).json({ message: 'Forbidden' });
+        return;
+      }
+
       const foodEntry = new FoodEntry({
         wellnessDataId,
         name,
@@ -145,6 +207,7 @@ router.post(
 
       await WellnessData.findByIdAndUpdate(wellnessDataId, {
         $push: { foodEntries: foodEntry._id },
+        hasActivity: true,
       });
 
       res.status(200).json(foodEntry);
@@ -162,6 +225,12 @@ router.post(
     const { name, type, intensity, caloriesBurned } = req.body;
 
     try {
+      const wellnessData = await WellnessData.findById(wellnessDataId);
+      if (!checkModelOwnership(wellnessData, 'userId', req.body.userId)) {
+        res.status(403).json({ message: 'Forbidden' });
+        return;
+      }
+
       const exerciseEntry = new ExerciseEntry({
         wellnessDataId,
         name,
@@ -173,6 +242,7 @@ router.post(
 
       await WellnessData.findByIdAndUpdate(wellnessDataId, {
         $push: { exerciseEntries: exerciseEntry._id },
+        hasActivity: true,
       });
 
       res.status(200).json(exerciseEntry);
@@ -189,6 +259,12 @@ router.delete(
     const { wellnessDataId, foodEntryId } = req.params;
 
     try {
+      const wellnessData = await WellnessData.findById(wellnessDataId);
+      if (!checkModelOwnership(wellnessData, 'userId', req.body.userId)) {
+        res.status(403).json({ message: 'Forbidden' });
+        return;
+      }
+
       await FoodEntry.findByIdAndDelete(foodEntryId);
 
       await WellnessData.findByIdAndUpdate(wellnessDataId, {
@@ -209,6 +285,12 @@ router.delete(
     const { wellnessDataId, exerciseEntryId } = req.params;
 
     try {
+      const wellnessData = await WellnessData.findById(wellnessDataId);
+      if (!checkModelOwnership(wellnessData, 'userId', req.body.userId)) {
+        res.status(403).json({ message: 'Forbidden' });
+        return;
+      }
+
       await ExerciseEntry.findByIdAndDelete(exerciseEntryId);
 
       await WellnessData.findByIdAndUpdate(wellnessDataId, {
