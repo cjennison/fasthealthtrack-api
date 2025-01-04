@@ -161,7 +161,6 @@ router.post(
 // Login Endpoint
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
-  console.log('email', email, 'password', password);
   try {
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
@@ -171,7 +170,6 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      console.log('password did not match');
       res.status(400).json({ message: 'Invalid credentials' });
       return;
     }

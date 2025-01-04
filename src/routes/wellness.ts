@@ -40,7 +40,9 @@ router.get(
     }
 
     try {
-      const wellnessData = await WellnessData.find(query);
+      const wellnessData = await WellnessData.find(query).populate(
+        'foodEntries exerciseEntries'
+      );
       res.status(200).json(wellnessData);
     } catch (error) {
       res.status(500).json({ message: 'Error fetching data', error });
@@ -60,7 +62,7 @@ router.get(
       const wellnessData = await WellnessData.findOne({
         date: formatDate(date),
         userId: userId,
-      });
+      }).populate('foodEntries exerciseEntries');
       if (!wellnessData) {
         res.status(404).json({ message: 'No data found for this date' });
         return;
@@ -79,6 +81,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
   try {
     const existingData = await WellnessData.findOne({
       date: date,
+      userId: req.body.userId,
     });
 
     if (existingData) {
@@ -101,8 +104,6 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
 router.put('/:id', authenticate, async (req: Request, res: Response) => {
   const { id } = req.params;
   const { glassesOfWater } = req.body;
-
-  console.log(req.body);
 
   try {
     const wellnessData = await WellnessData.findById(id);
@@ -134,29 +135,25 @@ router.post(
     const { name, quantity, calories } = req.body;
 
     try {
-      const wellnessData = await WellnessData.findById(wellnessDataId);
-      if (!checkModelOwnership(wellnessData, 'userId', req.body.userId)) {
-        res.status(403).json({ message: 'Forbidden' });
-        return;
-      }
-      if (!wellnessData) {
-        res.status(404).json({ message: 'No data found for this date' });
-        return;
-      }
+      const foodEntry = new FoodEntry({
+        wellnessDataId,
+        name,
+        quantity,
+        calories,
+      });
+      await foodEntry.save();
 
-      wellnessData.foodEntries.push(
-        new FoodEntry({ name, quantity, calories })
-      );
-      await wellnessData.save();
+      await WellnessData.findByIdAndUpdate(wellnessDataId, {
+        $push: { foodEntries: foodEntry._id },
+      });
 
-      res.status(200).json(wellnessData);
+      res.status(200).json(foodEntry);
     } catch (error) {
       res.status(500).json({ message: 'Error adding food entry', error });
     }
   }
 );
 
-// Add an exercise entry to a wellness data item
 router.post(
   '/:wellnessDataId/exercise',
   authenticate,
@@ -165,25 +162,62 @@ router.post(
     const { name, type, intensity, caloriesBurned } = req.body;
 
     try {
-      const wellnessData = await WellnessData.findById(wellnessDataId);
-      if (!checkModelOwnership(wellnessData, 'userId', req.body.userId)) {
-        res.status(403).json({ message: 'Forbidden' });
-        return;
-      }
+      const exerciseEntry = new ExerciseEntry({
+        wellnessDataId,
+        name,
+        type,
+        intensity,
+        caloriesBurned,
+      });
+      await exerciseEntry.save();
 
-      if (!wellnessData) {
-        res.status(404).json({ message: 'No data found for this date' });
-        return;
-      }
+      await WellnessData.findByIdAndUpdate(wellnessDataId, {
+        $push: { exerciseEntries: exerciseEntry._id },
+      });
 
-      wellnessData.exerciseEntries.push(
-        new ExerciseEntry({ name, type, intensity, caloriesBurned })
-      );
-      await wellnessData.save();
-
-      res.status(200).json(wellnessData);
+      res.status(200).json(exerciseEntry);
     } catch (error) {
       res.status(500).json({ message: 'Error adding exercise entry', error });
+    }
+  }
+);
+
+router.delete(
+  '/:wellnessDataId/food/:foodEntryId',
+  authenticate,
+  async (req: Request, res: Response) => {
+    const { wellnessDataId, foodEntryId } = req.params;
+
+    try {
+      await FoodEntry.findByIdAndDelete(foodEntryId);
+
+      await WellnessData.findByIdAndUpdate(wellnessDataId, {
+        $pull: { foodEntries: foodEntryId },
+      });
+
+      res.status(200).json({ message: 'Food entry removed successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error removing food entry', error });
+    }
+  }
+);
+
+router.delete(
+  '/:wellnessDataId/exercise/:exerciseEntryId',
+  authenticate,
+  async (req: Request, res: Response) => {
+    const { wellnessDataId, exerciseEntryId } = req.params;
+
+    try {
+      await ExerciseEntry.findByIdAndDelete(exerciseEntryId);
+
+      await WellnessData.findByIdAndUpdate(wellnessDataId, {
+        $pull: { exerciseEntries: exerciseEntryId },
+      });
+
+      res.status(200).json({ message: 'Exercise entry removed successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error removing food entry', error });
     }
   }
 );

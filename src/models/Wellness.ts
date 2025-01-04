@@ -1,12 +1,18 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
 interface IFoodEntry extends Document {
+  wellnessDataId: Types.ObjectId;
   name: string;
-  quantity: string;
+  quantity: 'some' | 'half' | 'full' | 'extra';
   calories: number;
 }
 
 const FoodEntrySchema = new Schema<IFoodEntry>({
+  wellnessDataId: {
+    type: Schema.Types.ObjectId,
+    ref: 'WellnessData',
+    required: true,
+  },
   name: { type: String, required: true },
   quantity: { type: String, required: true },
   calories: { type: Number, required: true },
@@ -15,13 +21,19 @@ const FoodEntrySchema = new Schema<IFoodEntry>({
 const FoodEntry = mongoose.model<IFoodEntry>('FoodEntry', FoodEntrySchema);
 
 interface IExerciseEntry extends Document {
+  wellnessDataId: Types.ObjectId;
   name: string;
-  type: string;
-  intensity: string;
+  type: 'cardio' | 'strength' | 'other';
+  intensity: 'easy' | 'moderate' | 'hard';
   caloriesBurned: number;
 }
 
 const ExerciseEntrySchema = new Schema<IExerciseEntry>({
+  wellnessDataId: {
+    type: Schema.Types.ObjectId,
+    ref: 'WellnessData',
+    required: true,
+  },
   name: { type: String, required: true },
   type: { type: String, required: true },
   intensity: { type: String, required: true },
@@ -36,8 +48,8 @@ const ExerciseEntry = mongoose.model<IExerciseEntry>(
 interface IWellnessData extends Document {
   userId: Types.ObjectId;
   date: String;
-  foodEntries: Types.Array<IFoodEntry>;
-  exerciseEntries: Types.Array<IExerciseEntry>;
+  foodEntries: Types.ObjectId[];
+  exerciseEntries: Types.ObjectId[];
   glassesOfWater: number;
 }
 
@@ -51,12 +63,14 @@ const WellnessDataSchema = new Schema<IWellnessData>({
     type: String,
     required: true,
     match: /^\d{4}-\d{2}-\d{2}$/,
-    unique: true,
   }, // YYYY-MM-DD format
-  foodEntries: [{ type: FoodEntrySchema }],
-  exerciseEntries: [{ type: ExerciseEntrySchema }],
+  foodEntries: [{ type: Schema.Types.ObjectId, ref: 'FoodEntry' }],
+  exerciseEntries: [{ type: Schema.Types.ObjectId, ref: 'ExerciseEntry' }],
   glassesOfWater: { type: Number, default: 0 },
 });
+
+//  Ensure that there is only one wellness data item per user per day
+WellnessDataSchema.index({ userId: 1, date: 1 }, { unique: true });
 
 const WellnessData = mongoose.model<IWellnessData>(
   'WellnessData',
