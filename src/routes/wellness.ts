@@ -197,11 +197,13 @@ router.post(
         return;
       }
 
+      const caloriesConsumed = calories || 300; // Default to 300 if not provided
+
       const foodEntry = new FoodEntry({
         wellnessDataId,
         name,
         quantity,
-        calories,
+        calories: caloriesConsumed,
       });
       await foodEntry.save();
 
@@ -231,12 +233,15 @@ router.post(
         return;
       }
 
+      // TODO: Validate type and intensity with AI
+      const caloriesBurnedFinal = caloriesBurned || 200; // Default to 200 if not provided
+
       const exerciseEntry = new ExerciseEntry({
         wellnessDataId,
         name,
         type,
         intensity,
-        caloriesBurned,
+        caloriesBurned: caloriesBurnedFinal,
       });
       await exerciseEntry.save();
 
