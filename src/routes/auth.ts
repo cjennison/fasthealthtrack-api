@@ -39,6 +39,12 @@ router.post('/signup', async (req: Request, res: Response): Promise<void> => {
         type: 'email',
       });
       await emailVerification.save();
+
+      // Create verification status
+      const verificationStatus = new VerificationStatus({
+        userId: user._id,
+      });
+      await verificationStatus.save();
       verificationService.sendVerificationEmail(email, verificationCode);
     }
     if (phoneNumber) {
@@ -48,6 +54,12 @@ router.post('/signup', async (req: Request, res: Response): Promise<void> => {
         type: 'sms',
       });
       await smsVerification.save();
+
+      // Create verification status
+      const verificationStatus = new VerificationStatus({
+        userId: user._id,
+      });
+      await verificationStatus.save();
       await verificationService.sendVerificationSMS(
         phoneNumber,
         verificationCode
@@ -67,39 +79,52 @@ router.post('/signup', async (req: Request, res: Response): Promise<void> => {
 });
 
 // Verify Endpoint
-router.post('/verify', async (req: Request, res: Response): Promise<void> => {
-  const { email, verificationCode, type } = req.body;
-  try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
+router.post(
+  '/users/:id/verify',
+  async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+    const { email, verificationCode, type } = req.body;
+    try {
+      const userById = await User.findById(id);
+      const user = await User.findOne({ email });
+      if (!user || !userById) {
+        res.status(404).json({ message: 'User not found' });
+        return;
+      }
+      if (user.id.toString() !== userById.id.toString()) {
+        res.status(400).json({ message: 'Invalid user' });
+        return;
+      }
+
+      const verification = await Verification.findOne({
+        userId: user._id,
+        type,
+      });
+      if (
+        !verification ||
+        !verificationService.verifyCode(
+          verification.verificationCode,
+          verificationCode
+        )
+      ) {
+        res.status(400).json({ message: 'Invalid verification code' });
+        return;
+      }
+      await VerificationStatus.findOneAndUpdate(
+        { userId: user._id },
+        { [`is${type.charAt(0).toUpperCase() + type.slice(1)}Verified`]: true },
+        { upsert: true, new: true }
+      );
+      await verification.save();
+      await Verification.deleteOne({ userId: user._id, type });
+      res.status(200).json({
+        message: `${type.charAt(0).toUpperCase() + type.slice(1)} verified successfully`,
+      });
+    } catch (err) {
+      res.status(500).json({ message: 'Error verifying', error: err });
     }
-    const verification = await Verification.findOne({ userId: user._id, type });
-    if (
-      !verification ||
-      !verificationService.verifyCode(
-        verification.verificationCode,
-        verificationCode
-      )
-    ) {
-      res.status(400).json({ message: 'Invalid verification code' });
-      return;
-    }
-    await VerificationStatus.findOneAndUpdate(
-      { userId: user._id },
-      { [`is${type.charAt(0).toUpperCase() + type.slice(1)}Verified`]: true },
-      { upsert: true, new: true }
-    );
-    await verification.save();
-    await Verification.deleteOne({ userId: user._id, type });
-    res.status(200).json({
-      message: `${type.charAt(0).toUpperCase() + type.slice(1)} verified successfully`,
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Error verifying', error: err });
   }
-});
+);
 
 // Resend Verification Code Endpoint
 router.post(
@@ -154,6 +179,38 @@ router.post(
       res
         .status(500)
         .json({ message: 'Error resending verification code', error: err });
+    }
+  }
+);
+
+router.get(
+  '/users/:id/verification-status',
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+      const user = await User.findById(id);
+      if (!user) {
+        res.status(404).json({ message: 'User not found' });
+        return;
+      }
+      const verificationStatus = await VerificationStatus.findOne({
+        userId: user._id,
+      }).lean();
+
+      if (!verificationStatus) {
+        // Create one
+        const newVerificationStatus = new VerificationStatus({
+          userId: user._id,
+        });
+        await newVerificationStatus.save();
+        res.status(200).json(newVerificationStatus);
+        return;
+      }
+      res.status(200).json(verificationStatus);
+    } catch (err) {
+      res
+        .status(500)
+        .json({ message: 'Error fetching verification status', error: err });
     }
   }
 );
