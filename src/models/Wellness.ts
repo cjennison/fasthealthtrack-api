@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 interface IFoodEntry extends Document {
   wellnessDataId: Types.ObjectId;
   name: string;
+  foodItemId: Types.ObjectId;
   quantity: 'some' | 'half' | 'full' | 'extra';
   calories: number;
 }
@@ -12,6 +13,11 @@ const FoodEntrySchema = new Schema<IFoodEntry>({
     type: Schema.Types.ObjectId,
     ref: 'WellnessData',
     required: true,
+  },
+  foodItemId: {
+    type: Schema.Types.ObjectId,
+    ref: 'FoodItem',
+    required: false,
   },
   name: { type: String, required: true },
   quantity: { type: String, required: true },

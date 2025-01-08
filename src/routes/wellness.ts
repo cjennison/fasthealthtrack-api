@@ -7,6 +7,10 @@ import { WellnessData, FoodEntry, ExerciseEntry } from '../models/Wellness';
 import checkOwnership from './middleware/check-ownership';
 import User from '../models/User';
 import checkModelOwnership from './utils/check-model-ownership';
+import {
+  calculateCalories,
+  findOrCreateFood,
+} from '../services/food-evaluator';
 
 const router = Router();
 
@@ -197,14 +201,26 @@ router.post(
         return;
       }
 
-      const caloriesConsumed = calories || 300; // Default to 300 if not provided
+      const foodItem = await findOrCreateFood(name);
+      if (!foodItem) {
+        res.status(400).json({ message: 'Could not find or create food item' });
+        return;
+      }
+
+      const evaluatedCalories = calculateCalories(
+        foodItem.caloriesPerUnit,
+        quantity
+      );
+      const caloriesConsumed = calories || evaluatedCalories;
 
       const foodEntry = new FoodEntry({
+        foodItemId: foodItem._id,
         wellnessDataId,
         name,
         quantity,
         calories: caloriesConsumed,
       });
+
       await foodEntry.save();
 
       await WellnessData.findByIdAndUpdate(wellnessDataId, {
