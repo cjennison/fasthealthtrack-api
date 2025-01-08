@@ -24,6 +24,17 @@ const FoodEntrySchema = new Schema<IFoodEntry>({
   calories: { type: Number, required: true },
 });
 
+FoodEntrySchema.set('toJSON', {
+  virtuals: true,
+  transform: (_, ret) => {
+    if (ret.foodItemId) {
+      ret.foodItem = ret.foodItemId; // Rename foodItemId to foodItem
+      delete ret.foodItemId; // Remove foodItemId from the output
+    }
+    return ret;
+  },
+});
+
 const FoodEntry = mongoose.model<IFoodEntry>('FoodEntry', FoodEntrySchema);
 
 interface IExerciseEntry extends Document {

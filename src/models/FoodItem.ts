@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 
 interface IFoodItem extends Document {
   name: string; // The name of the food item
+  key: string; // The key of the food item for easy consistent search
   caloriesPerUnit: number; // Calorie count per unit or a standard serving
   units: string; // Unit of measurement (e.g., "serving", "piece", "gram")
   description?: string; // Optional description of the food item
@@ -12,6 +13,11 @@ const FoodItemSchema = new Schema<IFoodItem>({
     type: String,
     required: true,
     unique: true, // Ensure food items are unique by name
+  },
+  key: {
+    type: String,
+    required: true,
+    unique: true, // Ensure food items are unique by key
   },
   caloriesPerUnit: {
     type: Number,

@@ -1,6 +1,7 @@
 import { createCompletion } from '../services/openai-connection-service';
 import FoodItem from '../models/FoodItem';
 import Prompts from '../prompts';
+import { normalizeString } from '../utils/string-normalizer';
 
 interface FoodItemElements {
   name: string;
@@ -63,12 +64,14 @@ export const getFoodItemInformationFromAI = async (
 };
 
 export const findOrCreateFood = async (name: string): Promise<any> => {
-  let food = await FoodItem.findOne({ name });
+  const key = normalizeString(name);
+  let food = await FoodItem.findOne({ key });
   if (!food) {
     try {
       const foodElements = await getFoodItemInformationFromAI(name);
       food = new FoodItem({
         name: foodElements.name,
+        key: normalizeString(foodElements.name),
         caloriesPerUnit: foodElements.caloriesPerUnit,
         units: foodElements.units,
         description: foodElements.description,

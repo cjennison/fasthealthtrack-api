@@ -44,9 +44,15 @@ router.get(
     }
 
     try {
-      const wellnessData = await WellnessData.find(query).populate(
-        'foodEntries exerciseEntries'
-      );
+      const wellnessData = await WellnessData.find(query)
+        .populate({
+          path: 'foodEntries',
+          populate: {
+            path: 'foodItemId',
+            model: 'FoodItem',
+          },
+        })
+        .populate('exerciseEntries');
       res.status(200).json(wellnessData);
     } catch (error) {
       res.status(500).json({ message: 'Error fetching data', error });
@@ -119,7 +125,16 @@ router.get(
       const wellnessData = await WellnessData.findOne({
         date: formatDate(date),
         userId: userId,
-      }).populate('foodEntries exerciseEntries');
+      })
+        .populate({
+          path: 'foodEntries',
+          populate: {
+            path: 'foodItemId',
+            model: 'FoodItem',
+          },
+        })
+        .populate('exerciseEntries');
+
       if (!wellnessData) {
         res.status(404).json({ message: 'No data found for this date' });
         return;
@@ -201,27 +216,49 @@ router.post(
         return;
       }
 
-      const foodItem = await findOrCreateFood(name);
-      if (!foodItem) {
-        res.status(400).json({ message: 'Could not find or create food item' });
-        return;
+      let foodEntry;
+
+      if (calories && typeof calories == 'number') {
+        // If calories are provided by the user, then no evaluation is needed
+        if (calories <= 0) {
+          res.status(400).json({ message: 'Calories must be greater than 0' });
+          return;
+        }
+        const personalFoodEntry = new FoodEntry({
+          wellnessDataId,
+          name,
+          quantity,
+          calories: calories,
+        });
+
+        await personalFoodEntry.save();
+        foodEntry = personalFoodEntry;
+      } else {
+        const foodItem = await findOrCreateFood(name);
+        if (!foodItem) {
+          res
+            .status(400)
+            .json({ message: 'Could not find or create food item' });
+          return;
+        }
+
+        const evaluatedCalories = calculateCalories(
+          foodItem.caloriesPerUnit,
+          quantity
+        );
+        const caloriesConsumed = calories || evaluatedCalories;
+
+        const generatedFoodEntry = new FoodEntry({
+          foodItemId: foodItem._id,
+          wellnessDataId,
+          name,
+          quantity,
+          calories: caloriesConsumed,
+        });
+
+        await generatedFoodEntry.save();
+        foodEntry = generatedFoodEntry;
       }
-
-      const evaluatedCalories = calculateCalories(
-        foodItem.caloriesPerUnit,
-        quantity
-      );
-      const caloriesConsumed = calories || evaluatedCalories;
-
-      const foodEntry = new FoodEntry({
-        foodItemId: foodItem._id,
-        wellnessDataId,
-        name,
-        quantity,
-        calories: caloriesConsumed,
-      });
-
-      await foodEntry.save();
 
       await WellnessData.findByIdAndUpdate(wellnessDataId, {
         $push: { foodEntries: foodEntry._id },
