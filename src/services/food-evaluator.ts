@@ -72,7 +72,7 @@ export const findOrCreateFood = async (name: string): Promise<any> => {
       food = new FoodItem({
         name: foodElements.name,
         key: normalizeString(foodElements.name),
-        caloriesPerUnit: foodElements.caloriesPerUnit,
+        caloriesPerUnit: Math.floor(foodElements.caloriesPerUnit), // Ensure calories are whole numbers
         units: foodElements.units,
         description: foodElements.description,
       });
@@ -123,5 +123,5 @@ export const calculateCalories = (
     full: 1.0,
     extra: 1.5,
   };
-  return caloriesPerUnit * (multipliers[quantity] || 1.0);
+  return Math.floor(caloriesPerUnit * (multipliers[quantity] || 1.0));
 };
