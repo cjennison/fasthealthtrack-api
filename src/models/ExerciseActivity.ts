@@ -7,10 +7,11 @@ interface IExerciseActivity extends Document {
   baseMetabolicRate: number; // The base metabolic rate of the exercise activity
 }
 
-const FoodItemSchema = new Schema<IExerciseActivity>({
+const ExerciseActivitySchema = new Schema<IExerciseActivity>({
   name: {
     type: String,
     required: true,
+    maxlength: 100, // Limit the length of the name to 100 characters
   },
   key: {
     type: String,
@@ -28,7 +29,7 @@ const FoodItemSchema = new Schema<IExerciseActivity>({
 
 const ExerciseActivity = mongoose.model<IExerciseActivity>(
   'ExerciseActivity',
-  FoodItemSchema
+  ExerciseActivitySchema
 );
 
 export default ExerciseActivity;

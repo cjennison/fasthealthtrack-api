@@ -13,6 +13,7 @@ const FoodItemSchema = new Schema<IFoodItem>({
     type: String,
     required: true,
     unique: true, // Ensure food items are unique by name
+    maxlength: 100, // Limit the length of the name to 100 characters
   },
   key: {
     type: String,
