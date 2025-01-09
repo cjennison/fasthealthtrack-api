@@ -39,9 +39,11 @@ const FoodEntry = mongoose.model<IFoodEntry>('FoodEntry', FoodEntrySchema);
 
 interface IExerciseEntry extends Document {
   wellnessDataId: Types.ObjectId;
+  exerciseActivityId: Types.ObjectId;
   name: string;
   type: 'cardio' | 'strength' | 'other';
   intensity: 'easy' | 'moderate' | 'hard';
+  duration: number;
   caloriesBurned: number;
 }
 
@@ -51,10 +53,27 @@ const ExerciseEntrySchema = new Schema<IExerciseEntry>({
     ref: 'WellnessData',
     required: true,
   },
+  exerciseActivityId: {
+    type: Schema.Types.ObjectId,
+    ref: 'ExerciseActivity',
+    required: false,
+  },
   name: { type: String, required: true },
   type: { type: String, required: true },
+  duration: { type: Number, required: true },
   intensity: { type: String, required: true },
   caloriesBurned: { type: Number, required: true },
+});
+
+ExerciseEntrySchema.set('toJSON', {
+  virtuals: true,
+  transform: (_, ret) => {
+    if (ret.exerciseActivityId) {
+      ret.exerciseActivity = ret.exerciseActivityId; // Rename foodItemId to foodItem
+      delete ret.exerciseActivityId; // Remove foodItemId from the output
+    }
+    return ret;
+  },
 });
 
 const ExerciseEntry = mongoose.model<IExerciseEntry>(

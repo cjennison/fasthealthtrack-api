@@ -11,6 +11,11 @@ import {
   calculateCalories,
   findOrCreateFood,
 } from '../services/food-evaluator';
+import {
+  calculcateCaloriesBurned,
+  findOrCreateExerciseActivity,
+} from '../services/exercise-evaluator';
+import UserProfile from '../models/UserProfile';
 
 const router = Router();
 
@@ -52,7 +57,13 @@ router.get(
             model: 'FoodItem',
           },
         })
-        .populate('exerciseEntries');
+        .populate({
+          path: 'exerciseEntries',
+          populate: {
+            path: 'exerciseActivityId',
+            model: 'ExerciseActivity',
+          },
+        });
       res.status(200).json(wellnessData);
     } catch (error) {
       res.status(500).json({ message: 'Error fetching data', error });
@@ -133,7 +144,13 @@ router.get(
             model: 'FoodItem',
           },
         })
-        .populate('exerciseEntries');
+        .populate({
+          path: 'exerciseEntries',
+          populate: {
+            path: 'exerciseActivityId',
+            model: 'ExerciseActivity',
+          },
+        });
 
       if (!wellnessData) {
         res.status(404).json({ message: 'No data found for this date' });
@@ -251,7 +268,7 @@ router.post(
         const generatedFoodEntry = new FoodEntry({
           foodItemId: foodItem._id,
           wellnessDataId,
-          name,
+          name: foodItem.name,
           quantity,
           calories: caloriesConsumed,
         });
@@ -265,7 +282,11 @@ router.post(
         hasActivity: true,
       });
 
-      res.status(200).json(foodEntry);
+      const populatedFoodEntry = await FoodEntry.findById(
+        foodEntry._id
+      ).populate('foodItemId');
+
+      res.status(200).json(populatedFoodEntry);
     } catch (error) {
       res.status(500).json({ message: 'Error adding food entry', error });
     }
@@ -277,7 +298,7 @@ router.post(
   authenticate,
   async (req: Request, res: Response) => {
     const { wellnessDataId } = req.params;
-    const { name, type, intensity, caloriesBurned } = req.body;
+    const { name, type, intensity, duration, caloriesBurned } = req.body;
 
     try {
       const wellnessData = await WellnessData.findById(wellnessDataId);
@@ -286,24 +307,71 @@ router.post(
         return;
       }
 
-      // TODO: Validate type and intensity with AI
-      const caloriesBurnedFinal = caloriesBurned || 200; // Default to 200 if not provided
+      let exerciseEntry;
 
-      const exerciseEntry = new ExerciseEntry({
-        wellnessDataId,
-        name,
-        type,
-        intensity,
-        caloriesBurned: caloriesBurnedFinal,
-      });
-      await exerciseEntry.save();
+      if (caloriesBurned && typeof caloriesBurned == 'number') {
+        const personalExerciseEntry = new ExerciseEntry({
+          wellnessDataId,
+          name,
+          type,
+          intensity,
+          duration,
+          caloriesBurned,
+        });
+        await personalExerciseEntry.save();
+
+        exerciseEntry = personalExerciseEntry;
+      } else {
+        // Generate an exercise item from AI
+        const exerciseActivity = await findOrCreateExerciseActivity(name, type);
+        if (!exerciseActivity) {
+          res
+            .status(400)
+            .json({ message: 'Could not find or create exercise activity' });
+          return;
+        }
+
+        // Get user profile
+        const userProfile = await UserProfile.findOne({
+          userId: req.body.userId,
+        });
+        if (!userProfile || !userProfile.weight) {
+          res.status(400).json({ message: 'User profile not found' });
+          return;
+        }
+
+        const calculcatedCaloriesBurned = calculcateCaloriesBurned(
+          exerciseActivity.baseMetabolicRate,
+          duration,
+          intensity,
+          userProfile.weight,
+          'lbs'
+        );
+
+        const generatedExerciseEntry = new ExerciseEntry({
+          exerciseActivityId: exerciseActivity._id,
+          wellnessDataId,
+          name: exerciseActivity.name,
+          type,
+          intensity,
+          duration,
+          caloriesBurned: calculcatedCaloriesBurned,
+        });
+
+        generatedExerciseEntry.save();
+        exerciseEntry = generatedExerciseEntry;
+      }
 
       await WellnessData.findByIdAndUpdate(wellnessDataId, {
         $push: { exerciseEntries: exerciseEntry._id },
         hasActivity: true,
       });
 
-      res.status(200).json(exerciseEntry);
+      const populatedExerciseEntry = await ExerciseEntry.findById(
+        exerciseEntry._id
+      ).populate('exerciseActivityId');
+
+      res.status(200).json(populatedExerciseEntry);
     } catch (error) {
       res.status(500).json({ message: 'Error adding exercise entry', error });
     }

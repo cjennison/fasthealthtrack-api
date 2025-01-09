@@ -21,6 +21,8 @@ export const getFoodItemInformationFromAI = async (
     throw new Error('No response from OpenAI');
   }
 
+  console.log('Response from OpenAI: ' + JSON.stringify(response));
+
   try {
     if (typeof response?.message.content === 'string') {
       const data = JSON.parse(response.message.content);

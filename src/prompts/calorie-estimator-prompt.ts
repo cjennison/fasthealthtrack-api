@@ -20,7 +20,7 @@ const generatePrompt = (name: string) => {
     "description": "A delicious food item"
   }
 
-  Is should be a valid JSON String such that JSON.parse is successful. Do not include any other contents than json.
+  It should be a valid JSON String such that JSON.parse is successful. Do not include any other contents than json.
 
   `;
   return prompt;
