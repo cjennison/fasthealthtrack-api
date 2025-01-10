@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import InvalidTokenError from '../../errors/InvalidTokenError';
 
 // Middleware to verify token and extract userId
 const authenticate = (req: Request, res: Response, next: Function) => {
@@ -16,7 +17,9 @@ const authenticate = (req: Request, res: Response, next: Function) => {
 
     next();
   } catch (err) {
-    res.status(401).json({ message: 'Invalid token' });
+    console.log(err);
+    const invalidTokenError = new InvalidTokenError('Invalid token');
+    res.status(401).json(invalidTokenError.toJSON());
   }
 };
 

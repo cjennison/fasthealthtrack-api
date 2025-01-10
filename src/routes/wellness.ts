@@ -1,5 +1,5 @@
 import { response, Router } from 'express';
-import { Request, Response } from 'express-serve-static-core';
+import { NextFunction, Request, Response } from 'express-serve-static-core';
 
 import checkRole from './middleware/check-role';
 import authenticate from './middleware/authenticate';
@@ -7,15 +7,6 @@ import { WellnessData, FoodEntry, ExerciseEntry } from '../models/Wellness';
 import checkOwnership from './middleware/check-ownership';
 import User from '../models/User';
 import checkModelOwnership from './utils/check-model-ownership';
-import {
-  calculateCalories,
-  findOrCreateFood,
-} from '../services/food-evaluator';
-import {
-  calculcateCaloriesBurned,
-  findOrCreateExerciseActivity,
-} from '../services/exercise-evaluator';
-import UserProfile from '../models/UserProfile';
 
 import {
   createExerciseEntry,
@@ -227,7 +218,7 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
 router.post(
   '/:wellnessDataId/food',
   authenticate,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const { wellnessDataId } = req.params;
     const { name, quantity, calories } = req.body;
 
@@ -259,7 +250,7 @@ router.post(
 
       res.status(200).json(populatedFoodEntry);
     } catch (error) {
-      res.status(500).json({ message: 'Error adding food entry', error });
+      next(error);
     }
   }
 );
@@ -267,7 +258,7 @@ router.post(
 router.post(
   '/:wellnessDataId/exercise',
   authenticate,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const { wellnessDataId } = req.params;
     const { name, type, intensity, duration, caloriesBurned } = req.body;
 
@@ -299,7 +290,7 @@ router.post(
 
       res.status(200).json(populatedExerciseEntry);
     } catch (error) {
-      res.status(500).json({ message: 'Error adding exercise entry', error });
+      next(error);
     }
   }
 );

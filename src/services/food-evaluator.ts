@@ -1,7 +1,11 @@
-import { createCompletion } from '../services/openai-connection-service';
+import {
+  contentPassesModeration,
+  createCompletion,
+} from '../services/openai-connection-service';
 import FoodItem from '../models/FoodItem';
 import Prompts from '../prompts';
 import { normalizeString } from '../utils/string-normalizer';
+import ContentModerationError from '../errors/ContentModerationError';
 
 interface FoodItemElements {
   name: string;
@@ -13,9 +17,18 @@ interface FoodItemElements {
 export const getFoodItemInformationFromAI = async (
   foodName: string
 ): Promise<FoodItemElements> => {
-  const response = await createCompletion(
-    Prompts.calorieEstimationPrompt(foodName)
-  );
+  const contentPrompt = Prompts.calorieEstimationPrompt(foodName);
+
+  // Moderate content
+  let isContentModerated: Boolean =
+    await contentPassesModeration(contentPrompt);
+
+  if (!isContentModerated) {
+    console.log('Content flagged by moderation');
+    throw new ContentModerationError('Content flagged by moderation');
+  }
+
+  const response = await createCompletion(contentPrompt);
   if (!response) {
     console.log('No response from OpenAI');
     throw new Error('No response from OpenAI');
@@ -39,6 +52,7 @@ export const getFoodItemInformationFromAI = async (
       }
 
       if (data.caloriesPerUnit && typeof data.caloriesPerUnit === 'number') {
+        console.log(data);
         caloriesPerUnit = data.caloriesPerUnit;
       } else {
         throw new Error('No caloriesPerUnit found in OpenAI response');
@@ -81,7 +95,7 @@ export const findOrCreateFood = async (name: string): Promise<any> => {
       await food.save();
     } catch (error) {
       console.log('Error creating food item: ' + error);
-      throw new Error('Error creating food item: ' + error);
+      throw error;
     }
   }
   return food;

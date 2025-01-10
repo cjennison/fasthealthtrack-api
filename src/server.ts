@@ -12,6 +12,7 @@ import wellnessRoutes from './routes/wellness';
 import suggestionRoutes from './routes/suggestion';
 
 import localLogger from './routes/middleware/local-logger';
+import errorHandler from './routes/middleware/error-handler';
 
 // Initialize Express app
 const app = express();
@@ -43,6 +44,8 @@ app.use('/suggestions', suggestionRoutes);
 app.get('/', (req, res) => {
   res.send('Welcome to Gesundr API');
 });
+
+app.use(errorHandler);
 
 // Start the Server
 const PORT = process.env.PORT || 3000;

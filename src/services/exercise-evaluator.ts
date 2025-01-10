@@ -1,7 +1,11 @@
-import { createCompletion } from './openai-connection-service';
+import {
+  createCompletion,
+  contentPassesModeration,
+} from './openai-connection-service';
 import Prompts from '../prompts';
 import ExerciseActivity from '../models/ExerciseActivity';
 import { normalizeString } from '../utils/string-normalizer';
+import ContentModerationError from '../errors/ContentModerationError';
 
 interface ExerciseActivityElements {
   name: string;
@@ -13,15 +17,25 @@ export const getExerciseActivityInformationFromAI = async (
   exerciseName: string,
   type: 'cardio' | 'strength' | 'other'
 ): Promise<ExerciseActivityElements> => {
-  const response = await createCompletion(
-    Prompts.exerciseEffortEstimatorPrompt(exerciseName, type)
+  const contentPrompt = Prompts.exerciseEffortEstimatorPrompt(
+    exerciseName,
+    type
   );
+
+  // Moderate content
+  let isContentModerated: Boolean =
+    await contentPassesModeration(contentPrompt);
+
+  if (!isContentModerated) {
+    console.log('Content flagged by moderation');
+    throw new ContentModerationError('Content flagged by moderation');
+  }
+
+  const response = await createCompletion(contentPrompt);
   if (!response) {
     console.log('No response from OpenAI');
     throw new Error('No response from OpenAI');
   }
-
-  console.log(response);
 
   try {
     if (typeof response?.message.content === 'string') {
@@ -67,7 +81,7 @@ export const findOrCreateExerciseActivity = async (
   type: 'cardio' | 'strength' | 'other'
 ): Promise<any> => {
   const name = normalizeString(exerciseName);
-  const existingExercise = await ExerciseActivity.findOne({ name });
+  const existingExercise = await ExerciseActivity.findOne({ key: name });
   if (existingExercise) {
     return existingExercise;
   }
@@ -76,7 +90,7 @@ export const findOrCreateExerciseActivity = async (
     const exercise = await getExerciseActivityInformationFromAI(name, type);
     const newExercise = new ExerciseActivity({
       name: exercise.name,
-      key: name,
+      key: normalizeString(exercise.name),
       baseMetabolicRate: exercise.baseMetabolicRate,
       description: exercise.description,
     });
@@ -84,8 +98,7 @@ export const findOrCreateExerciseActivity = async (
 
     return newExercise;
   } catch (error) {
-    console.log('Error finding or creating exercise activity', error);
-    throw new Error('Error finding or creating exercise activity');
+    throw error;
   }
 };
 
