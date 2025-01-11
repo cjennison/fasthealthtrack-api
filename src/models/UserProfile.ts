@@ -5,6 +5,8 @@ interface IUserProfile extends Document {
   age?: number;
   weight?: number;
   activityLevel: 'low' | 'moderate' | 'active';
+  calorieGoal: number;
+  height?: number; //cm
   gender:
     | 'male'
     | 'female'
@@ -28,12 +30,20 @@ const userProfileSchema = new Schema<IUserProfile>({
   },
   weight: {
     type: Number,
-    default: 180.0,
+    default: 180.0, //kgs
+  },
+  height: {
+    type: Number,
+    default: 180, // cms
   },
   activityLevel: {
     type: String,
     enum: ['low', 'moderate', 'active'],
     default: 'moderate',
+  },
+  calorieGoal: {
+    type: Number,
+    default: 2000,
   },
   gender: {
     type: String,

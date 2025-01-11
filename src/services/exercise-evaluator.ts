@@ -113,15 +113,15 @@ const intensityMultipliers: Record<string, number> = {
 // Weight (kg): The weight of the person in kilograms.
 // Duration (hours): The duration of the exercise activity in hours.
 // The MET value is multiplied by the weight of the person in kilograms and the duration of the exercise activity in hours to calculate the calories burned.
-export const calculcateCaloriesBurned = (
+export const calculateCaloriesBurned = (
   baseMetabolicRate: number,
   duration: number, // In minutes
   intensity: 'easy' | 'moderate' | 'hard',
   weight: number,
-  weightUnits: 'kg' | 'lbs'
+  weightUnits: 'imperial' | 'metric'
 ): number => {
   const met = baseMetabolicRate * intensityMultipliers[intensity];
-  const weightInKg = weightUnits === 'kg' ? weight : weight * 0.453592; // Convert lbs to kg
+  const weightInKg = weightUnits === 'imperial' ? weight : weight * 0.453592; // Convert lbs to kg
   const caloriesBurned = met * weightInKg * (duration / 60); // Convert duration to hours
   return Math.floor(caloriesBurned);
 };

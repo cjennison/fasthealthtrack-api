@@ -9,69 +9,24 @@ import authenticate from './middleware/authenticate';
 import verificationService from '../services/verification-service';
 import Verification from '../models/Verification';
 import VerificationStatus from '../models/VerificationStatus';
-import UserProfile from '../models/UserProfile';
+import {
+  handleGetCurrentUser,
+  handleSignup,
+} from '../controllers/auth-controller';
 
 const router = Router();
 
 // Sign Up Endpoint
 router.post('/signup', async (req: Request, res: Response): Promise<void> => {
-  const { email, password, username, phoneNumber } = req.body;
+  const { email, password, username } = req.body;
+
+  if (!email || !password || !username) {
+    res.status(400).json({ message: 'Missing required fields' });
+    return;
+  }
+
   try {
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-    if (existingUser) {
-      res
-        .status(400)
-        .json({ message: 'User with this email or username already exists' });
-      return;
-    }
-    const user = new User({ email, password, username, phoneNumber });
-    await user.save();
-
-    // Create default UserProfile
-    const userProfile = new UserProfile({ userId: user._id });
-    await userProfile.save();
-
-    const verificationCode = verificationService.generateVerificationCode();
-    if (email) {
-      const emailVerification = new Verification({
-        userId: user._id,
-        verificationCode,
-        type: 'email',
-      });
-      await emailVerification.save();
-
-      // Create verification status
-      const verificationStatus = new VerificationStatus({
-        userId: user._id,
-      });
-      await verificationStatus.save();
-      verificationService.sendVerificationEmail(email, verificationCode);
-    }
-    if (phoneNumber) {
-      const smsVerification = new Verification({
-        userId: user._id,
-        verificationCode,
-        type: 'sms',
-      });
-      await smsVerification.save();
-
-      // Create verification status
-      const verificationStatus = new VerificationStatus({
-        userId: user._id,
-      });
-      await verificationStatus.save();
-      await verificationService.sendVerificationSMS(
-        phoneNumber,
-        verificationCode
-      );
-    }
-
-    const token = jwt.sign(
-      { userId: user._id, role: user.role },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '1h' }
-    );
-
+    const token = await handleSignup(req, res);
     res.status(201).json({ message: 'User created successfully', token });
   } catch (err) {
     res.status(500).json({ message: 'Error creating user', error: err });
@@ -236,7 +191,6 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       process.env.JWT_SECRET as string,
       { expiresIn: '1h' }
     );
-    console.log('token', token);
     res.status(200).json({ token });
   } catch (err) {
     console.log('error', err);
@@ -249,20 +203,14 @@ router.get(
   authenticate,
   async (req: Request, res: Response) => {
     const { userId } = req.body;
+    if (!userId) {
+      res.status(400).json({ message: 'User ID not provided' });
+      return;
+    }
+
     try {
-      const user = await User.findById(userId).lean();
-      if (!user) {
-        res.status(404).json({ message: 'User not found' });
-        return;
-      }
-
-      // Get UserProfile
-      const userProfile = await UserProfile.findOne({ userId }).lean();
-
-      // Merge UserProfile into user object
-      const mergedUser = { ...user, userProfile: userProfile };
-
-      res.status(200).json(mergedUser);
+      const user = await handleGetCurrentUser(req, res);
+      res.status(200).json(user);
     } catch (err) {
       res
         .status(500)

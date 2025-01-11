@@ -3,6 +3,11 @@ import UserProfile from '../models/UserProfile'; // Assuming the UserProfile mod
 import authenticate from './middleware/authenticate'; // Middleware to authenticate the request
 import checkOwnership from './middleware/check-ownership';
 import User from '../models/User';
+import {
+  calculcateRecommendedCalorieGoal,
+  Algorithm,
+} from '../services/user-profile-service';
+import UserPreference from '../models/UserPreferences';
 
 const router = Router();
 
@@ -63,6 +68,74 @@ router.put(
         message: 'An error occurred while updating the profile',
         error,
       });
+    }
+  }
+);
+
+router.get(
+  '/:userId/recommended-calorie-goal',
+  authenticate,
+  checkOwnership(User, 'userId', '_id'),
+  async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const { algorithm } = req.query;
+
+    let algorithmType = algorithm as Algorithm;
+    if (!algorithmType) {
+      algorithmType = 'harris-benedict';
+    }
+
+    try {
+      const calorieGoal = await calculcateRecommendedCalorieGoal(
+        userId,
+        algorithmType
+      );
+
+      res.status(200).json({ recommendedCalorieGoal: calorieGoal });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: 'Error calculating calorie goal', error });
+    }
+  }
+);
+
+router.put(
+  '/:userId/preferences',
+  authenticate,
+  checkOwnership(User, 'userId', '_id'),
+  async (req: Request, res: Response): Promise<void> => {
+    const { weightHeightUnits } = req.body;
+    const { userId } = req.params;
+
+    if (!['imperial', 'metric'].includes(weightHeightUnits)) {
+      res.status(400).json({
+        message: `Invalid weightHeightUnits value. Allowed: 'imperial', 'metric'`,
+      });
+      return;
+    }
+
+    try {
+      // Find or create the user preferences document
+      let userPreferences = await UserPreference.findOne({ userId });
+
+      if (userPreferences) {
+        // Update existing preferences
+        userPreferences.weightHeightUnits = weightHeightUnits;
+      } else {
+        // Create new preferences
+        userPreferences = new UserPreference({ userId, weightHeightUnits });
+      }
+
+      await userPreferences.save();
+
+      res.status(200).json({
+        message: 'Preferences updated successfully',
+        preferences: userPreferences,
+      });
+    } catch (error) {
+      console.error('Error updating user preferences:', error);
+      res.status(500).json({ message: 'Error updating preferences', error });
     }
   }
 );

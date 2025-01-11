@@ -5,20 +5,21 @@ import UserProfile from '../models/UserProfile';
 import { WellnessData, FoodEntry, ExerciseEntry } from '../models/Wellness';
 
 import {
-  calculcateCaloriesBurned,
+  calculateCaloriesBurned,
   findOrCreateExerciseActivity,
 } from '../services/exercise-evaluator';
 import {
   calculateCalories,
   findOrCreateFood,
 } from '../services/food-evaluator';
+import UserPreference from '../models/UserPreferences';
 
 export const createFoodEntry = async (
   req: Request,
   res: Response
 ): Promise<any> => {
   const { wellnessDataId } = req.params;
-  const { name, quantity, unit, calories } = req.body;
+  const { name, quantity, calories } = req.body;
 
   let foodEntry;
 
@@ -110,12 +111,22 @@ export const createExerciseEntry = async (
       return;
     }
 
-    const calculcatedCaloriesBurned = calculcateCaloriesBurned(
+    // Get user preference
+    const userPreference = await UserPreference.findOne({
+      userId: req.body.userId,
+    });
+
+    if (!userPreference) {
+      res.status(400).json({ message: 'User preference not found' });
+      return;
+    }
+
+    const calculcatedCaloriesBurned = calculateCaloriesBurned(
       exerciseActivity.baseMetabolicRate,
       duration,
       intensity,
       userProfile.weight,
-      'lbs'
+      userPreference.weightHeightUnits
     );
 
     const generatedExerciseEntry = new ExerciseEntry({
