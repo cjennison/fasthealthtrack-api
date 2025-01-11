@@ -42,7 +42,8 @@ export const hansBenedict = (
 
 export const calculcateRecommendedCalorieGoal = async (
   userId: string,
-  algorithm: Algorithm
+  algorithm: Algorithm,
+  forcedActivityLevel?: string
 ) => {
   const userProfile = await UserProfile.findOne({ userId });
   if (!userProfile) {
@@ -56,6 +57,7 @@ export const calculcateRecommendedCalorieGoal = async (
 
   const { age, weight, height, gender, activityLevel } = userProfile;
   const units = userPreferences.weightHeightUnits;
+  const activityLevelToUse = forcedActivityLevel || activityLevel;
 
   let calorieGoal: number = 2000;
 
@@ -66,7 +68,7 @@ export const calculcateRecommendedCalorieGoal = async (
         weight || DEFAULT_WEIGHT,
         height || 180,
         gender,
-        activityLevel,
+        activityLevelToUse,
         units
       );
       break;

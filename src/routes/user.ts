@@ -78,7 +78,7 @@ router.get(
   checkOwnership(User, 'userId', '_id'),
   async (req: Request, res: Response) => {
     const { userId } = req.params;
-    const { algorithm } = req.query;
+    const { algorithm, activityLevel } = req.query;
 
     let algorithmType = algorithm as Algorithm;
     if (!algorithmType) {
@@ -88,7 +88,8 @@ router.get(
     try {
       const calorieGoal = await calculcateRecommendedCalorieGoal(
         userId,
-        algorithmType
+        algorithmType,
+        typeof activityLevel === 'string' ? activityLevel : undefined
       );
 
       res.status(200).json({ recommendedCalorieGoal: calorieGoal });
