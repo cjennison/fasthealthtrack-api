@@ -102,16 +102,16 @@ export const handleGetCurrentUser = async (
   const userProfile = await UserProfile.findOne({ userId }).lean();
 
   // Get UserPreference
-  let userPreference: any = await UserPreference.findOne({ userId }).lean();
-  if (!userPreference) {
-    userPreference = await findOrCreateUserPreferences(userId);
+  let userPreferences: any = await UserPreference.findOne({ userId }).lean();
+  if (!userPreferences) {
+    userPreferences = await findOrCreateUserPreferences(userId);
   }
 
   // Merge UserProfile into user object
   const mergedUser = {
     ...user,
     userProfile: userProfile,
-    userPreference: userPreference,
+    userPreferences: userPreferences,
   };
 
   return mergedUser;

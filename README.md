@@ -37,7 +37,35 @@ JWT_SECRET=your_secret_key
 To run the application, use the following command:
 
 ```sh
-$ npm start
+$ npm run dev
 ```
 
 The application will be running at `http://localhost:3000`.
+
+## Migrations
+
+To run migrations, `migrate-mongo` has been set up.
+
+### 1. Install migrate-mongo
+
+```sh
+$ npm install -g migrate-mongo
+```
+
+### 2. Create a Migration
+
+```sh
+$ migrate-mongo create [migration_name]
+```
+
+### 3. Run Migrations
+
+```sh
+$ migrate-mongo up
+```
+
+### 4. Rollback Migrations
+
+```sh
+$ migrate-mongo down
+```
